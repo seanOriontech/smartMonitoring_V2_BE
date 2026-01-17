@@ -1,6 +1,9 @@
+using smartMonitoringBE.Domain.Entitities.Security;
+
+
 namespace smartMonitoringBE.Domain.Entitities.User;
 
-public enum AccountRole { Owner = 0, Admin = 1, Member = 2, Billing = 3, Viewer = 4 }
+
 
 public class AccountUser
 {
@@ -10,8 +13,13 @@ public class AccountUser
     public Guid UserId { get; set; }
     public AppUser User { get; set; } = null!;
 
-    public AccountRole Role { get; set; } = AccountRole.Member;
+    public Guid RoleId { get; set; }
+    public Role Role { get; set; }
     public bool IsPrimary { get; set; } = true;
+    
+    public bool IsDefault { get; set; } = false;
 
     public DateTimeOffset JoinedUtc { get; set; } = DateTimeOffset.UtcNow;
+    
+    public ICollection<AccountUserScope> Scopes { get; set; } = new List<AccountUserScope>();
 }

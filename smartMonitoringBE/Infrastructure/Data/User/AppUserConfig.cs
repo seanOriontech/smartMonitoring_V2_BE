@@ -20,5 +20,7 @@ public class AppUserConfig : IEntityTypeConfiguration<AppUser>
         b.Property(x => x.GivenName).HasMaxLength(100);
         b.Property(x => x.Surname).HasMaxLength(100);
         b.Property(x => x.DisplayName).HasMaxLength(200);
+        
+
     }
 }

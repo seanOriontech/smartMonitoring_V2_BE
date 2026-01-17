@@ -1,6 +1,15 @@
 namespace smartMonitoringBE.Models.DTO;
 
-public record MeResponseDto(
+public sealed record MeAccountDto(
+    Guid AccountId,
+    string AccountName,
+    string AccountType,
+    string Role,
+    bool IsPrimary,
+    bool IsDefault
+);
+
+public sealed record MeResponseDto(
     Guid UserId,
     string TenantId,
     string ObjectId,
@@ -8,9 +17,9 @@ public record MeResponseDto(
     string? GivenName,
     string? Surname,
     string? DisplayName,
-    Guid? AccountId,
-    string? AccountName,
-    string? AccountType,
-    string? PlanTier,
-    bool RequiresOnboarding
+
+    Guid PrimaryAccountId,
+    bool RequiresOnboarding,
+
+    IReadOnlyList<MeAccountDto> Accounts
 );

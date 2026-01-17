@@ -20,5 +20,12 @@ public class AccountUserConfig : IEntityTypeConfiguration<AccountUser>
             .HasForeignKey(x => x.UserId);
 
         b.HasIndex(x => new { x.UserId, x.IsPrimary });
+        
+        b.Property(x => x.RoleId).IsRequired();
+
+        b.HasOne(x => x.Role)
+            .WithMany(r => r.AccountUsers)
+            .HasForeignKey(x => x.RoleId)
+            .OnDelete(DeleteBehavior.Restrict);
     }
 }

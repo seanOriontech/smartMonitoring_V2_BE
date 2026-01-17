@@ -1,3 +1,6 @@
+using smartMonitoringBE.Domain.Entitities.Structure;
+using smartMonitoringBE.Domain.Entitities.Tiers;
+
 namespace smartMonitoringBE.Domain.Entitities.User;
 
 public enum AccountType { None = 0, Individual = 1, Business = 2 }
@@ -9,6 +12,11 @@ public class Account
 
     public AccountType Type { get; set; }
     public PlanTier Tier { get; set; } = PlanTier.Starter;
+    
+    public Guid PlanVersionId { get; set; }
+    public PlanVersion? PlanVersion { get; set; } = null!;
+    
+    public DateTimeOffset? PlanStartedDateTime { get; set; }
 
     public string? Industry { get; set; } 
     public string Name { get; set; } = ""; // Person name or Business name
@@ -31,4 +39,8 @@ public class Account
     public Address? Address { get; set; }
 
     public ICollection<AccountUser> Users { get; set; } = new List<AccountUser>();
+    
+    public ICollection<AccountPlanChange> PlanChanges { get; set; } = new List<AccountPlanChange>();
+    
+    public ICollection<Workspace> Workspaces { get; set; } = new List<Workspace>();
 }

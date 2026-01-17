@@ -1,8 +1,10 @@
 using System.Security.Claims;
 using Microsoft.EntityFrameworkCore;
+using smartMonitoringBE.Domain.Entitities.Structure;
 using smartMonitoringBE.Domain.Entitities.User;
 using smartMonitoringBE.Infrastructure.Data;
 using smartMonitoringBE.Models.DTO.Onboarding;
+using Address = smartMonitoringBE.Domain.Entitities.User.Address;
 
 namespace smartMonitoringBE.Services.Onboarding;
 
@@ -40,8 +42,25 @@ public sealed class OnboardingService : IOnboardingService
 
         // Map enums
         account.Type = MapAccountType(req.AccountType);
-        account.Tier = MapTier(req.Tier);
+        account.PlanVersionId = req.PlanVersionId;
 
+        var planVersion = await _db.PlanVersions.FindAsync(req.PlanVersionId);
+        account.PlanStartedDateTime = DateTimeOffset.UtcNow;
+        account.PlanVersionId = planVersion.Id;
+        
+        Workspace workspace = new Workspace();
+        workspace.PrimaryWorkspace = true;
+        workspace.CreatedUtc = DateTimeOffset.Now;
+        workspace.TimeZone = "Africa/Johannesburg";
+
+        workspace.Nodes = new List<WorkspaceNode>();
+        WorkspaceNode newWorkSpaceNode = new WorkspaceNode();
+        workspace.Nodes.Add(newWorkSpaceNode);
+        newWorkSpaceNode.Name = "Home";
+        newWorkSpaceNode.Type = WorkspaceNodeType.Folder;
+     
+  
+     
         if (account.Type == AccountType.Business)
         {
             var b = req.Business;
@@ -55,6 +74,12 @@ public sealed class OnboardingService : IOnboardingService
             account.Address.City = b.City.Trim();
             account.Address.Province = b.Province.Trim();
             account.Address.PostalCode = b.PostalCode.Trim();
+            
+            workspace.Name =b.BusinessName.Trim();
+            workspace.Type = WorkspaceType.Organisation;
+            workspace.Code = await GenerateWorkspaceCodeAsync (account.Id, workspace.Name,ct);
+          
+
         }
         else
         {
@@ -70,13 +95,39 @@ public sealed class OnboardingService : IOnboardingService
             account.Address.Province = p.Province.Trim();
             account.Address.PostalCode = p.PostalCode.Trim();
             account.Address.Line1 ??= ""; // keep safe if your schema requires it
+            
+            workspace.Name =p.PreferredName.Trim();
+            workspace.Type = WorkspaceType.Project;
+            
+            workspace.Code = await GenerateWorkspaceCodeAsync (account.Id, workspace.Name,ct);
         }
+
+ 
 
         // Optional: mark onboarding complete flag if you have one.
         // If your "requiresOnboarding" is computed from missing fields, then filling these will make it false.
         user.LastLoginUtc = DateTimeOffset.UtcNow;
 
         await _db.SaveChangesAsync(ct);
+    }
+    
+    public async Task<string> GenerateWorkspaceCodeAsync(
+        Guid accountId,
+        string name,
+        CancellationToken ct)
+    {
+        var baseCode = SlugHelper.Slugify(name);
+        var code = baseCode;
+        var i = 1;
+
+        while (await _db.Workspaces.AnyAsync(
+                   w => w.AccountId == accountId && w.Code == code, ct))
+        {
+            i++;
+            code = $"{baseCode}-{i}";
+        }
+
+        return code;
     }
 
     private static AccountType MapAccountType(string type) =>
@@ -87,13 +138,5 @@ public sealed class OnboardingService : IOnboardingService
            
         };
 
-    private static PlanTier MapTier(string tier) =>
-        tier.Trim().ToLowerInvariant() switch
-        {
-            "trial" => PlanTier.Trail,
-            "starter" => PlanTier.Starter,
-            "growth" => PlanTier.Growth,
-            "business" => PlanTier.Business,
-            "enterprise" => PlanTier.Enterprise,
-        };
+   
 }

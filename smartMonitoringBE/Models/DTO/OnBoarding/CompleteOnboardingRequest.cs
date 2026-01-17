@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using smartMonitoringBE.Domain.Entitities.Tiers;
 
 namespace smartMonitoringBE.Models.DTO.Onboarding;
 
@@ -9,8 +10,8 @@ public sealed class CompleteOnboardingRequest
     public string AccountType { get; init; } = default!;
 
     [Required]
-    [RegularExpression("trial|starter|growth|business|enterprise", ErrorMessage = "tier is invalid.")]
-    public string Tier { get; init; } = default!;
+    
+    public Guid PlanVersionId  { get; init; } = default!;
 
     public BusinessOnboardingDto? Business { get; init; }
     public PersonalOnboardingDto? Personal { get; init; }

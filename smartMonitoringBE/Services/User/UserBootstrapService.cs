@@ -116,10 +116,12 @@ public class UserBootstrapService : IUserBootstrapService
             {
                 AccountId = account.Id,
                 UserId = user.Id,
-                Role = AccountRole.Owner,
+              //  Role = AccountRole.Owner,
                 IsPrimary = true,
                 JoinedUtc = DateTimeOffset.UtcNow,
+                IsDefault = true,
                 Account = account // ✅ set navigation so it’s available immediately
+                
             };
             _db.AccountUsers.Add(primaryLink);
         }
@@ -128,7 +130,24 @@ public class UserBootstrapService : IUserBootstrapService
         await tx.CommitAsync(ct);
 
         var requiresOnboarding =
-            (account.Type == AccountType.None || account.Tier == PlanTier.None); 
+            (account.Type == AccountType.None || account.PlanVersionId == Guid.Empty); 
+        
+        var accounts = user.Accounts
+            
+            .Where(au => au.Account != null)
+            
+            .Select(au => new MeAccountDto(
+                AccountId: au.AccountId,
+                AccountName: au.Account!.Name,
+                AccountType: au.Account!.Type.ToString(),
+                Role: au.Role.ToString(),
+                IsPrimary: au.IsPrimary,
+                IsDefault: au.IsDefault
+            ))
+            .OrderByDescending(a => a.IsDefault)
+            .ThenByDescending(a => a.IsPrimary)
+            .ThenBy(a => a.AccountName)
+            .ToList();
 
         return new MeResponseDto(
             UserId: user.Id,
@@ -138,10 +157,8 @@ public class UserBootstrapService : IUserBootstrapService
             GivenName: user.GivenName,
             Surname: user.Surname,
             DisplayName: user.DisplayName,
-            AccountId: account.Id,
-            AccountName: account.Name,
-            AccountType: account.Type.ToString(),
-            PlanTier: account.Tier.ToString(),
+            PrimaryAccountId: primaryLink.AccountId,
+            Accounts: accounts,
             RequiresOnboarding: requiresOnboarding
         );
     }
