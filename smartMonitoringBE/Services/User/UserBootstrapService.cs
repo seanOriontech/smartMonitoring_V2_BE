@@ -54,115 +54,121 @@ public class UserBootstrapService : IUserBootstrapService
 
         await using var tx = await _db.Database.BeginTransactionAsync(ct);
 
-    try
-    {
-        var user = await _db.Users
-            .Include(u => u.Accounts)
+        try
+        {
+            var user = await _db.Users
+                .Include(u => u.Accounts)
                 .ThenInclude(au => au.Account)
-            .FirstOrDefaultAsync(u => u.TenantId == tid && u.ObjectId == oid, ct);
+                .Include( u=> u.Accounts)
+                .ThenInclude( au=>au.Role)
+                .FirstOrDefaultAsync(u => u.TenantId == tid && u.ObjectId == oid, ct);
 
-        if (user is null)
-        {
-            user = new AppUser
+            if (user is null)
             {
-                Id = Guid.NewGuid(),
-                TenantId = tid,
-                ObjectId = oid,
-                Email = email,
-                GivenName = given,
-                Surname = surname,
-                DisplayName = display ?? $"{given} {surname}".Trim(),
-                LastLoginUtc = DateTimeOffset.UtcNow
-            };
-            _db.Users.Add(user);
-        }
-        else
-        {
-           
-            user.LastLoginUtc = DateTimeOffset.UtcNow;
-            user.Email = email;
-            user.GivenName = given;
-            user.Surname = surname;
-            user.DisplayName = display ?? $"{given} {surname}".Trim();
-        }
-
-        // Ensure primary account link exists
-        var primaryLink = user.Accounts?.FirstOrDefault(x => x.IsPrimary);
-
-        Account account;
-
-        if (primaryLink?.Account is not null)
-        {
-            account = primaryLink.Account;
-        }
-        else if (primaryLink is not null)
-        {
-            // link exists but nav not loaded for some reason
-            account = await _db.Accounts.FirstAsync(a => a.Id == primaryLink.AccountId, ct);
-        }
-        else
-        {
-            account = new Account
+                user = new AppUser
+                {
+                    Id = Guid.NewGuid(),
+                    TenantId = tid,
+                    ObjectId = oid,
+                    Email = email,
+                    GivenName = given,
+                    Surname = surname,
+                    DisplayName = display ?? $"{given} {surname}".Trim(),
+                    LastLoginUtc = DateTimeOffset.UtcNow
+                };
+                _db.Users.Add(user);
+            }
+            else
             {
-                Id = Guid.NewGuid(),
-                //Type = AccountType.Individual,
-               // Tier = PlanTier.Starter,
-                Name = user.DisplayName ?? $"{given} {surname}".Trim(),
-                CreatedUtc = DateTimeOffset.UtcNow
-            };
-            _db.Accounts.Add(account);
 
-            primaryLink = new AccountUser
+                user.LastLoginUtc = DateTimeOffset.UtcNow;
+                user.Email = email;
+                user.GivenName = given;
+                user.Surname = surname;
+                user.DisplayName = display ?? $"{given} {surname}".Trim();
+            }
+
+            // Ensure primary account link exists
+            var primaryLink = user.Accounts?.FirstOrDefault(x => x.IsPrimary);
+
+            Account account;
+
+            if (primaryLink?.Account is not null)
             {
-                AccountId = account.Id,
-                UserId = user.Id,
-              //  Role = AccountRole.Owner,
-                IsPrimary = true,
-                JoinedUtc = DateTimeOffset.UtcNow,
-                IsDefault = true,
-                Account = account // ✅ set navigation so it’s available immediately
-                
-            };
-            _db.AccountUsers.Add(primaryLink);
+                account = primaryLink.Account;
+            }
+            else if (primaryLink is not null)
+            {
+                // link exists but nav not loaded for some reason
+                account = await _db.Accounts.FirstAsync(a => a.Id == primaryLink.AccountId, ct);
+            }
+            else
+            {
+                account = new Account
+                {
+                    Id = Guid.NewGuid(),
+                    //Type = AccountType.Individual,
+                    // Tier = PlanTier.Starter,
+                    Name = user.DisplayName ?? $"{given} {surname}".Trim(),
+                    CreatedUtc = DateTimeOffset.UtcNow
+                };
+                _db.Accounts.Add(account);
+
+                primaryLink = new AccountUser
+                {
+                    AccountId = account.Id,
+                    UserId = user.Id,
+                    //  Role = AccountRole.Owner,
+                    IsPrimary = true,
+                    JoinedUtc = DateTimeOffset.UtcNow,
+                    IsDefault = true,
+                    Account = account // ✅ set navigation so it’s available immediately
+
+                };
+                _db.AccountUsers.Add(primaryLink);
+            }
+
+            await _db.SaveChangesAsync(ct);
+            await tx.CommitAsync(ct);
+
+            var requiresOnboarding =
+                (account.Type == AccountType.None || account.PlanVersionId == Guid.Empty);
+
+            var accounts = user.Accounts
+
+                .Where(au => au.Account != null)
+
+                .Select(au => new MeAccountDto(
+                    AccountId: au.AccountId,
+                    AccountName: au.Account!.Name,
+                    AccountType: au.Account!.Type.ToString(),
+                    Role: au.Role.Name,
+                    IsPrimary: au.IsPrimary,
+                    IsDefault: au.IsDefault
+                ))
+                .OrderByDescending(a => a.IsDefault)
+                .ThenByDescending(a => a.IsPrimary)
+                .ThenBy(a => a.AccountName)
+                .ToList();
+
+            return new MeResponseDto(
+                UserId: user.Id,
+                TenantId: user.TenantId,
+                ObjectId: user.ObjectId,
+                Email: user.Email,
+                GivenName: user.GivenName,
+                Surname: user.Surname,
+                DisplayName: user.DisplayName,
+                PrimaryAccountId: primaryLink.AccountId,
+                Accounts: accounts,
+                RequiresOnboarding: requiresOnboarding
+            );
         }
-
-        await _db.SaveChangesAsync(ct);
-        await tx.CommitAsync(ct);
-
-        var requiresOnboarding =
-            (account.Type == AccountType.None || account.PlanVersionId == Guid.Empty); 
-        
-        var accounts = user.Accounts
+        catch (OperationCanceledException)
+        {
             
-            .Where(au => au.Account != null)
-            
-            .Select(au => new MeAccountDto(
-                AccountId: au.AccountId,
-                AccountName: au.Account!.Name,
-                AccountType: au.Account!.Type.ToString(),
-                Role: au.Role.ToString(),
-                IsPrimary: au.IsPrimary,
-                IsDefault: au.IsDefault
-            ))
-            .OrderByDescending(a => a.IsDefault)
-            .ThenByDescending(a => a.IsPrimary)
-            .ThenBy(a => a.AccountName)
-            .ToList();
-
-        return new MeResponseDto(
-            UserId: user.Id,
-            TenantId: user.TenantId,
-            ObjectId: user.ObjectId,
-            Email: user.Email,
-            GivenName: user.GivenName,
-            Surname: user.Surname,
-            DisplayName: user.DisplayName,
-            PrimaryAccountId: primaryLink.AccountId,
-            Accounts: accounts,
-            RequiresOnboarding: requiresOnboarding
-        );
-    }
-    catch (OperationCanceledException) { throw; }
+            throw;
+        }
     catch (DbUpdateException ex) when (IsUniqueViolation(ex))
     {
         // Likely race condition: two requests tried to create same user/link.

@@ -41,6 +41,8 @@ public class SmartMonitoringDbContext : DbContext
     public DbSet<RolePermission> RolePermissions => Set<RolePermission>();
     
     public DbSet<Workspace> Workspaces => Set<Workspace>();
+    
+    public DbSet<WorkspaceNode> WorkspaceNodes => Set<WorkspaceNode>();
 
     
   
