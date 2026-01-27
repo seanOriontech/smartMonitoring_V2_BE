@@ -7,4 +7,7 @@ public static class PermissionConstants
     public const string WorkspacesUpdate = "workspaces.update";
     public const string WorkspacesDelete = "workspaces.delete";
     public const string WorkspacesMove = "workspaces.move";
+    
+    public const string AccountsRead = "accounts.read";
+    public const string AccountsUpdate = "accounts.update";
 }

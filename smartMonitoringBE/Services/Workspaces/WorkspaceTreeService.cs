@@ -29,7 +29,7 @@ public sealed class WorkspaceTreeService : IWorkspaceTreeService
         var workspaces = await _db.Workspaces
             .AsNoTracking()
             .Where(w => w.AccountId == accountId && workspaceIds.Contains(w.Id) && w.IsActive)
-            .Select(w => new { w.Id, w.Name, w.Code, w.Type })
+            .Select(w => new { w.Id, w.Name, w.Code, w.Type ,w.Description, w.TimeZone })
             .ToListAsync(ct);
 
         // 3) load nodes (flat)
@@ -63,6 +63,8 @@ public sealed class WorkspaceTreeService : IWorkspaceTreeService
                 Name = w.Name,
                 Code = w.Code,
                 Type = w.Type,
+                TimeZone = w.TimeZone,
+                Description = w.Description,
                 Nodes = BuildTree(wsNodes) // BuildTree must accept List<dynamic>
             });
         }

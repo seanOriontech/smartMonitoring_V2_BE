@@ -9,7 +9,7 @@ public interface IWorkspaceService
     // Workspaces
     Task<Workspace> CreateWorkspaceAsync(Guid AccountId,WorkspaceCreateDto dto, CancellationToken ct = default);
     Task<Workspace> UpdateWorkspaceAsync(Guid accountId,Guid workspaceId, WorkspaceUpdateDto dto, CancellationToken ct = default);
-    //Task ArchiveWorkspaceAsync(Guid workspaceId, CancellationToken ct = default); // “delete” = soft delete
+    Task ArchiveWorkspaceAsync(Guid workspaceId, CancellationToken ct = default); // “delete” = soft delete
 
     // Nodes
     Task<WorkspaceNode> CreateNodeAsync(Guid accountId,Guid workspaceId, WorkspaceNodeCreateDto dto, CancellationToken ct = default);

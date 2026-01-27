@@ -5,7 +5,8 @@ public enum WorkspaceType
 {
     Organisation = 1,
     Client = 2,
-    Project = 3
+    Project = 3,
+    Personal = 4
 }
 
 public enum WorkspaceNodeType

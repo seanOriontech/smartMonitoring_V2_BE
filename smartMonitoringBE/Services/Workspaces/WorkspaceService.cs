@@ -50,9 +50,10 @@ public sealed class WorkspaceService : IWorkspaceService
 
         ws.Name = dto.Name.Trim();
         ws.Description = dto.Description?.Trim();
-        ws.IsActive = dto.IsActive;
+        ws.IsActive = true;
         ws.PrimaryWorkspace = dto.PrimaryWorkspace;
         ws.TimeZone = dto.TimeZone;
+        ws.Type = dto.workspaceType;
       //  ws.DefaultSiteId = dto.DefaultSiteId;
         ws.UpdatedUtc = DateTimeOffset.UtcNow;
 
@@ -60,7 +61,7 @@ public sealed class WorkspaceService : IWorkspaceService
         return ws;
     }
 
-   /* public async Task ArchiveWorkspaceAsync(Guid workspaceId, CancellationToken ct = default)
+    public async Task ArchiveWorkspaceAsync(Guid workspaceId, CancellationToken ct = default)
     {
         var ws = await _db.Workspaces.FirstOrDefaultAsync(x => x.Id == workspaceId, ct)
                  ?? throw new InvalidOperationException("Workspace not found.");
@@ -79,7 +80,7 @@ public sealed class WorkspaceService : IWorkspaceService
                 ct);
 
         await _db.SaveChangesAsync(ct);
-    }*/
+    }
 
     // -------------------------
     // Nodes

@@ -14,6 +14,10 @@ public sealed class WorkspaceTreeDto
     public string Name { get; set; } = "";
     public string Code { get; set; } = "";
     public WorkspaceType Type { get; set; }
+    
+    public string? TimeZone { get; set; }
+    
+    public string? Description { get; set; }
     public List<WorkspaceNodeTreeDto> Nodes { get; set; } = new();
 }
 

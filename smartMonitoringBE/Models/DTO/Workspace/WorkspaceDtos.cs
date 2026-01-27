@@ -16,6 +16,7 @@ public sealed record WorkspaceUpdateDto(
     string Name,
     string? Description,
     string? TimeZone,
+    WorkspaceType workspaceType ,
     bool PrimaryWorkspace,
     bool IsActive
 );

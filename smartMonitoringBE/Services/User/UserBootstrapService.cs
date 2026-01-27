@@ -48,6 +48,7 @@ public class UserBootstrapService : IUserBootstrapService
         var surname = me.Surname?.Trim();
         var display = me.DisplayName?.Trim();
         var oid = me.Id?.Trim();
+        
 
         // Graph sometimes returns mail null -> fallback to UPN
         var email = (me.Mail ?? me.UserPrincipalName)?.Trim();
@@ -67,7 +68,7 @@ public class UserBootstrapService : IUserBootstrapService
             {
                 user = new AppUser
                 {
-                    Id = Guid.NewGuid(),
+                    Id = new Guid(oid),
                     TenantId = tid,
                     ObjectId = oid,
                     Email = email,

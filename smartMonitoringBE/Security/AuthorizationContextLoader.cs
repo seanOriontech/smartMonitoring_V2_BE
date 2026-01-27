@@ -1,7 +1,9 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Writers;
+using smartMonitoringBE.Infrastructure.Constants;
 using smartMonitoringBE.Infrastructure.Data;
 using smartMonitoringBE.Security;
+
 
 
 public sealed class AuthorizationContextLoader : IAuthorizationContextLoader
@@ -12,9 +14,11 @@ public sealed class AuthorizationContextLoader : IAuthorizationContextLoader
 
     public async Task<AuthzContext?> Load(Guid userId, Guid accountId, CancellationToken ct)
     {
+        var userOid = userId.ToString();
+
         var data = await _db.AccountUsers
             .AsNoTracking()
-            .Where(au => au.UserId == userId && au.AccountId == accountId)
+            .Where(au => au.User.ObjectId == userOid && au.AccountId == accountId)
             .Select(au => new
             {
                 au.AccountId,
@@ -24,10 +28,10 @@ public sealed class AuthorizationContextLoader : IAuthorizationContextLoader
                     .ToList(),
                 Scopes = au.Scopes.Select(s => new
                 {
-                    s.TargetType,      // your enum
+                    s.TargetType,
                     s.WorkspaceId,
                     s.WorkspaceNodeId,
-                    s.AccountUser.Role.Id
+                    RoleId = au.RoleId // <-- don’t do s.AccountUser.Role.Id here
                 }).ToList()
             })
             .SingleOrDefaultAsync(ct);
@@ -36,7 +40,10 @@ public sealed class AuthorizationContextLoader : IAuthorizationContextLoader
 
         var perms = data.PermissionCodes.ToHashSet(StringComparer.OrdinalIgnoreCase);
 
-        var hasAll = data.Scopes.Any(s => s.Id  == new Guid("a1000000-0000-0000-0000-000000000001")); // The user is a owner has access to everything
+        var isOwner = data.RoleId == RoleConstants.Owner;
+
+// Owner automatically has full access
+        var hasAll = isOwner || data.Scopes.Count == 0;// The user is a owner has access to everything
         var workspaceIds = data.Scopes.Where(s => s.WorkspaceId != null)
             .Select(s => s.WorkspaceId).ToHashSet();
 
