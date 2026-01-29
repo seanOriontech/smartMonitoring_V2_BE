@@ -25,8 +25,8 @@ public class AccountConfig : IEntityTypeConfiguration<Account>
         b.OwnsOne(x => x.Address);
 
         // If you store bytes, pick a sensible size; varbinary(max) by default is fine
-        b.Property(x => x.LogoContentType).HasMaxLength(100);
-        b.Property(x => x.LogoUrl).HasMaxLength(2048);
+       // b.Property(x => x.LogoContentType).HasMaxLength(100);
+       // b.Property(x => x.LogoUrl).HasMaxLength(2048);
         
             b.Property(x => x.PlanVersionId)
             .IsRequired()
@@ -35,6 +35,8 @@ public class AccountConfig : IEntityTypeConfiguration<Account>
             .WithMany(v => v.Accounts)
             .HasForeignKey(x => x.PlanVersionId)
             .OnDelete(DeleteBehavior.Restrict); // don't delete plan versions when accounts are deleted
+        
+      
         
         
     }
