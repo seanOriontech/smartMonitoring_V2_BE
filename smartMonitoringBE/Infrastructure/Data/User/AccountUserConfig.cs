@@ -13,11 +13,13 @@ public class AccountUserConfig : IEntityTypeConfiguration<AccountUser>
 
         b.HasOne(x => x.Account)
             .WithMany(a => a.Users)
-            .HasForeignKey(x => x.AccountId);
+            .HasForeignKey(x => x.AccountId)
+            .OnDelete(DeleteBehavior.Cascade); // fin
 
         b.HasOne(x => x.User)
             .WithMany(u => u.Accounts)
-            .HasForeignKey(x => x.UserId);
+            .HasForeignKey(x => x.UserId)
+            .OnDelete(DeleteBehavior.NoAction); 
 
         b.HasIndex(x => new { x.UserId, x.IsPrimary });
         
@@ -26,6 +28,6 @@ public class AccountUserConfig : IEntityTypeConfiguration<AccountUser>
         b.HasOne(x => x.Role)
             .WithMany(r => r.AccountUsers)
             .HasForeignKey(x => x.RoleId)
-            .OnDelete(DeleteBehavior.Restrict);
+            .OnDelete(DeleteBehavior.NoAction);
     }
 }

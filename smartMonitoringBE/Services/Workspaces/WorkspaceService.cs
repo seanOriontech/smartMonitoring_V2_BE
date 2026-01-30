@@ -86,7 +86,32 @@ public sealed class WorkspaceService : IWorkspaceService
     // Nodes
     // -------------------------
 
-    public async Task<WorkspaceNode> CreateNodeAsync(Guid accountId,Guid workspaceId, WorkspaceNodeCreateDto dto, CancellationToken ct = default)
+    
+    public async Task<WorkspaceNodeDto> GetNodeAsync(
+        Guid accountId,
+        Guid workspaceId,
+        Guid nodeId,
+        CancellationToken ct = default)
+    {
+        // Optional but recommended: ensure workspace is owned by account
+        var wsOk = await _db.Workspaces.AnyAsync(w => w.Id == workspaceId && w.AccountId == accountId, ct);
+        if (!wsOk) throw new InvalidOperationException("Workspace not found.");
+
+        var node = await _db.WorkspaceNodes
+            .AsNoTracking()
+            .FirstOrDefaultAsync(n => n.Id == nodeId && n.WorkspaceId == workspaceId, ct);
+
+        if (node is null) throw new InvalidOperationException("Node not found.");
+
+        return node.ToDto();
+    }
+    
+    
+    public async Task<WorkspaceNode> CreateNodeAsync(
+        Guid accountId,
+        Guid workspaceId,
+        WorkspaceNodeCreateDto dto,
+        CancellationToken ct = default)
     {
         // validate workspace exists
         var wsExists = await _db.Workspaces.AnyAsync(w => w.Id == dto.WorkspaceId, ct);
@@ -95,11 +120,19 @@ public sealed class WorkspaceService : IWorkspaceService
         // validate parent belongs to same workspace (if provided)
         if (dto.ParentId != null)
         {
-            var parentOk = await _db.WorkspaceNodes.AnyAsync(n => n.Id == dto.ParentId && n.WorkspaceId == dto.WorkspaceId, ct);
+            var parentOk = await _db.WorkspaceNodes.AnyAsync(
+                n => n.Id == dto.ParentId && n.WorkspaceId == dto.WorkspaceId, ct);
+
             if (!parentOk) throw new InvalidOperationException("Parent node not found in this workspace.");
         }
 
-        var code = await EnsureUniqueNodeCodeAsync(accountId,dto.WorkspaceId, dto.ParentId, dto.Code ?? Slug(dto.Name), excludeNodeId: null, ct);
+        var code = await EnsureUniqueNodeCodeAsync(
+            accountId,
+            dto.WorkspaceId,
+            dto.ParentId,
+            dto.Code ?? Slug(dto.Name),
+            excludeNodeId: null,
+            ct);
 
         var node = new WorkspaceNode
         {
@@ -115,6 +148,10 @@ public sealed class WorkspaceService : IWorkspaceService
             Lat = dto.Lat,
             Lng = dto.Lng,
             TimeZone = dto.TimeZone,
+
+            Address = dto.Address.ToEntity(),
+            Contact = dto.Contact.ToEntity(),
+
             IsActive = true,
             CreatedUtc = DateTimeOffset.UtcNow
         };
@@ -125,32 +162,65 @@ public sealed class WorkspaceService : IWorkspaceService
         return node;
     }
 
-    public async Task<WorkspaceNode> UpdateNodeAsync(Guid accountId,Guid workspaceId,Guid nodeId, WorkspaceNodeUpdateDto dto, CancellationToken ct = default)
+public async Task<WorkspaceNode> UpdateNodeAsync(
+    Guid accountId,
+    Guid workspaceId,
+    Guid nodeId,
+    WorkspaceNodeUpdateDto dto,
+    CancellationToken ct = default)
+{
+    var node = await _db.WorkspaceNodes
+                   .FirstOrDefaultAsync(n => n.Id == nodeId, ct)
+               ?? throw new InvalidOperationException("Node not found.");
+
+    // if code provided, ensure unique under same parent scope
+    if (!string.IsNullOrWhiteSpace(dto.Code))
     {
-        var node = await _db.WorkspaceNodes.FirstOrDefaultAsync(n => n.Id == nodeId, ct)
-                   ?? throw new InvalidOperationException("Node not found.");
+        var code = await EnsureUniqueNodeCodeAsync(
+            accountId,
+            node.WorkspaceId,
+            node.ParentId,
+            Slug(dto.Code),
+            excludeNodeId: nodeId,
+            ct);
 
-        // if code provided, ensure unique under same parent scope
-        if (!string.IsNullOrWhiteSpace(dto.Code))
-        {
-            var code = await EnsureUniqueNodeCodeAsync(accountId,node.WorkspaceId, node.ParentId, Slug(dto.Code), excludeNodeId: nodeId, ct);
-            node.Code = code;
-        }
-
-        node.Name = dto.Name.Trim();
-        node.Description = dto.Description?.Trim();
-        node.Type = dto.Type;
-        node.IconType = dto.IconType;
-        node.SortOrder = dto.SortOrder;
-        node.Lat = dto.Lat;
-        node.Lng = dto.Lng;
-        node.TimeZone = dto.TimeZone;
-        node.IsActive = dto.IsActive;
-        node.UpdatedUtc = DateTimeOffset.UtcNow;
-
-        await _db.SaveChangesAsync(ct);
-        return node;
+        node.Code = code;
     }
+
+    node.Name = dto.Name.Trim();
+    node.Description = dto.Description?.Trim();
+    node.Type = dto.Type;
+    node.IconType = dto.IconType;
+    node.SortOrder = dto.SortOrder;
+    node.Lat = dto.Lat;
+    node.Lng = dto.Lng;
+    node.TimeZone = dto.TimeZone;
+    node.IsActive = dto.IsActive;
+
+    // Address: PATCH semantics
+    if (dto.Address is not null)
+    {
+        node.Address ??= new Address();
+        dto.Address.ApplyTo(node.Address);
+        // if after applying it's all blank, you can auto-null it:
+        if (IsEmpty(node.Address)) node.Address = null;
+    }
+
+    // Contact: PATCH semantics
+    if (dto.Contact is not null)
+    {
+        node.Contact ??= new ContactDetails();
+        dto.Contact.ApplyTo(node.Contact);
+        if (IsEmpty(node.Contact)) node.Contact = null;
+    }
+
+    node.UpdatedUtc = DateTimeOffset.UtcNow;
+
+    await _db.SaveChangesAsync(ct);
+    return node;
+}
+
+
 
     public async Task MoveNodeAsync(Guid accountId,Guid workspaceId,Guid nodeId, WorkspaceNodeMoveDto dto, CancellationToken ct = default)
     {
@@ -311,4 +381,17 @@ public sealed class WorkspaceService : IWorkspaceService
                     ct);
         }
     }
+    
+    private static bool IsEmpty(Address a) =>
+        string.IsNullOrWhiteSpace(a.Line1) &&
+        string.IsNullOrWhiteSpace(a.Line2) &&
+        string.IsNullOrWhiteSpace(a.City) &&
+        string.IsNullOrWhiteSpace(a.Province) &&
+        string.IsNullOrWhiteSpace(a.PostalCode) &&
+        string.IsNullOrWhiteSpace(a.Country);
+
+    private static bool IsEmpty(ContactDetails c) =>
+        string.IsNullOrWhiteSpace(c.ContactName) &&
+        string.IsNullOrWhiteSpace(c.Phone) &&
+        string.IsNullOrWhiteSpace(c.Email);
 }

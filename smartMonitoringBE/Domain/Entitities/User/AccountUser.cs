@@ -1,4 +1,5 @@
 using smartMonitoringBE.Domain.Entitities.Security;
+using smartMonitoringBE.Domain.Entitities.User.Group;
 
 
 namespace smartMonitoringBE.Domain.Entitities.User;
@@ -22,4 +23,6 @@ public class AccountUser
     public DateTimeOffset JoinedUtc { get; set; } = DateTimeOffset.UtcNow;
     
     public ICollection<AccountUserScope> Scopes { get; set; } = new List<AccountUserScope>();
+    
+    public ICollection<AccountUserGroup> Groups { get; set; } = new List<AccountUserGroup>();
 }

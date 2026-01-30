@@ -20,4 +20,6 @@ public interface IWorkspaceService
     // Optional helpers
     Task<bool> WorkspaceCodeExistsAsync(Guid accountId, string code, CancellationToken ct = default);
     Task<bool> NodeCodeExistsAsync(Guid accountId,Guid workspaceId, Guid? parentId, string code, Guid? excludeNodeId = null, CancellationToken ct = default);
+    
+    Task<WorkspaceNodeDto> GetNodeAsync(Guid accountId, Guid workspaceId, Guid nodeId, CancellationToken ct = default);
 }

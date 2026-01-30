@@ -62,7 +62,7 @@ public class UserBootstrapService : IUserBootstrapService
                 .ThenInclude(au => au.Account)
                 .Include( u=> u.Accounts)
                 .ThenInclude( au=>au.Role)
-                .FirstOrDefaultAsync(u => u.TenantId == tid && u.ObjectId == oid, ct);
+                .FirstOrDefaultAsync(u =>  u.ObjectId == oid, ct);
 
             if (user is null)
             {

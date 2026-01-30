@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
+using smartMonitoringBE.Exceptions;
 
 namespace smartMonitoringBE.Middleware;
 
@@ -27,6 +28,18 @@ public sealed class ExceptionHandlingMiddleware : IMiddleware
         {
             // Client disconnected / cancelled request. Not an error.
             ctx.Response.StatusCode = 499; // non-standard but common (nginx style)
+        }
+        catch (ConflictException ex)
+        {
+         
+  
+            ctx.Response.StatusCode = StatusCodes.Status409Conflict;
+            var traceId = ctx.TraceIdentifier;
+            var oid = ctx.User?.FindFirst("oid")?.Value;
+            var tid = ctx.User?.FindFirst("tid")?.Value;
+
+            var (status, title, safeDetail, logLevel) = Map(ex);
+            await WriteProblemDetailsAsync(ctx, status, title, safeDetail, traceId);
         }
         catch (Exception ex)
         {

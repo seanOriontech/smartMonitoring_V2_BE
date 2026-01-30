@@ -4,6 +4,7 @@ using smartMonitoringBE.Domain.Entitities.Security;
 using smartMonitoringBE.Domain.Entitities.Structure;
 using smartMonitoringBE.Domain.Entitities.Tiers;
 using smartMonitoringBE.Domain.Entitities.User;
+using smartMonitoringBE.Domain.Entitities.User.Group;
 using smartMonitoringBE.Infrastructure.Data.Tier;
 
 namespace smartMonitoringBE.Infrastructure.Data;
@@ -43,6 +44,11 @@ public class SmartMonitoringDbContext : DbContext
     public DbSet<Workspace> Workspaces => Set<Workspace>();
     
     public DbSet<WorkspaceNode> WorkspaceNodes => Set<WorkspaceNode>();
+    
+    public DbSet<AccountGroup> AccountGroups => Set<AccountGroup>();
+    public DbSet<AccountGroupScope> AccountGroupScopes => Set<AccountGroupScope>();
+    
+    public DbSet<AccountUserGroup> AccountUserGroups => Set<AccountUserGroup>();
 
     
   

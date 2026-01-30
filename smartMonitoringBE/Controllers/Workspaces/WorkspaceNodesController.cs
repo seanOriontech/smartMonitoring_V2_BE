@@ -35,4 +35,12 @@ public sealed class WorkspaceNodesController : ControllerBase
     [HttpPost("{nodeId:guid}/move")]
     public async Task<IActionResult> MoveNode([FromRoute] Guid accountId, [FromRoute] Guid workspaceId, [FromRoute] Guid nodeId, [FromBody] WorkspaceNodeMoveDto req, CancellationToken ct)
         => Ok();
+    
+    [HttpGet("{nodeId:guid}")]
+    public async Task<IActionResult> GetNode(
+        [FromRoute] Guid accountId,
+        [FromRoute] Guid workspaceId,
+        [FromRoute] Guid nodeId,
+        CancellationToken ct)
+        => Ok(await _svc.GetNodeAsync(accountId, workspaceId, nodeId, ct));
 }

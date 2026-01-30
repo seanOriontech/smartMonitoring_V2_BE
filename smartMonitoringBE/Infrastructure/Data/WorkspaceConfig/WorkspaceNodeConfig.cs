@@ -40,6 +40,8 @@ public sealed class WorkspaceNodeConfig : IEntityTypeConfiguration<WorkspaceNode
         // Indexes
         b.HasIndex(x => x.WorkspaceId);
         b.HasIndex(x => x.ParentId);
+        
+   
 
         // Optional friendly code (unique per workspace when provided)
         b.HasIndex(x => new { x.WorkspaceId, x.Code })
